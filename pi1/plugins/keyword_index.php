@@ -84,7 +84,7 @@ class tx_drwiki_pi1_keyword_index {
 					$prev_start_char = strtoupper($articles[$index]["keyword"]{0});
 				}
 
-				$r .= "<li>[[".$articles[$index]["keyword"]."]]</li>\n";
+				$r .= "<li>[[".htmlentities( $articles[$index]["keyword"])."]]</li>\n";
 			}
 			if( !$atColumnTop ) {
 				$r .= "</ul>\n";
