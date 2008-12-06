@@ -194,6 +194,12 @@
             $this->pi_setPiVarDefaults();
             $this->pi_initPIflexForm(); // Init and get the flexform data of the plugin
             
+            // get rid of XSS exploits by sanitising the piVars
+            // tx_drwiki_pi1[keyword]=<script>alert("doh")</script> and
+            // tx_drwiki_pi1[key"><SCRIPT%3Ealert("XSS")</SCRIPT>word]=HomePage
+            $this->sanitizer =  new html_sanitizer;
+            $this->piVars = $this->sanitizeValues($this->piVars);
+            
             // Assign the flexform data to a local variable for easier access
             $piFlexForm = $this->cObj->data['pi_flexform'];
 
@@ -268,6 +274,12 @@
 
             // Load templatecode
             $this->templateCode = $this->cObj->substituteMarkerArrayCached($this->templateCode, $globalMarkerArray);
+            
+            //initialte HTML sanitizer
+            //TODO: Add to configuration
+            $this->sanitizer->addAllowedTags($this->allowedHTML);
+            $this->sanitizer->addAdditionalTags($this->allowedWIKI);
+            $this->sanitizer->allowStyle();
 
             // Not nice, but functional :-) Loads the plugin-array
             // from the global variable $pluginArray defined in plugins/plugincfg.php
@@ -278,13 +290,6 @@
 				$this->ratingsApiObj = t3lib_div::makeInstance('tx_ratings_api');
 			}
 			
-            //initialte sanitizer
-            //TODO: Add to configuration
-            $this->sanitizer =  new html_sanitizer;
-            $this->sanitizer->addAllowedTags($this->allowedHTML);
-            $this->sanitizer->addAdditionalTags($this->allowedWIKI);
-            $this->sanitizer->allowStyle();
-
             switch((string)$conf["CMD"])
             {
                 case "singleView": // displays a single version
@@ -1713,8 +1718,27 @@
         function getCacheContent($fN)
         {
                 return $this->internal["currentCache"][$fN];
-        }        
-
+        }     
+  
+     /**
+     * sanitizeValues
+     *
+     */
+           
+	  function sanitizeValues($markerArray) {
+	
+			foreach ($markerArray as $key => $value) {
+				if(is_array($value)) {
+					$key = htmlentities($this->sanitizer->sanitize($key));
+					$sanitizedArray[$key] = $this->sanitizeValues($value);
+				} else {
+					$value = str_replace("\t","",$value);
+					$key = htmlentities($this->sanitizer->sanitize($key));
+					$sanitizedArray[$key] = $this->sanitizer->sanitize($value);
+				}
+			}
+			return $sanitizedArray;
+		}
 
 // Wiki Functions
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -3200,7 +3224,6 @@ function doTableStuff ($t )
         if ($keyword) {$query .= " AND keyword = '" . trim($keyword) . "'";}
         
         $res = $GLOBALS['TYPO3_DB']->sql_query($query);
-
         $i = 0;
         while ($row = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res)) {
             $result[$i] = $row;
