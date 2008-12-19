@@ -204,7 +204,7 @@
             
             // Assign the flexform data to a local variable for easier access
             $piFlexForm = $this->cObj->data['pi_flexform'];
-
+            
             // Traverse the entire array based on the language...
             // and assign each configuration option to $this->ffConf array...
             if ($piFlexForm) {
@@ -252,8 +252,7 @@
             // The admin can decide who can write to the WIKI. 
             // The user gets redirected to $this->pageRedirect
             $this->activateAccessControl = $this->ffConf["activateAccessControl"] ? $this->ffConf["activateAccessControl"] : false;
-
-debugster ($this->ffConf);            $this->allowedGroups = $this->ffConf["allowedGroups"] ? $this->ffConf["allowedGroups"] : false;
+            $this->allowedGroups = $this->ffConf["allowedGroups"] ? $this->ffConf["allowedGroups"] : false;
             $this->disallowedGroups = $this->ffConf["disallowedGroups"] ? $this->ffConf["disallowedGroups"] : false;
             $this->pageRedirect = $this->ffConf["pageRedirect"] ? $this->ffConf["pageRedirect"] : false;
             $this->adminUserGroup = $this->ffConf["adminUserGroup"] ? $this->ffConf["adminUserGroup"] : false;
