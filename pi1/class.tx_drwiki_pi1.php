@@ -114,7 +114,9 @@
         // turn off link Images?
         var $turnOffImageLink;
         //  Redirect edit-user to login page if not loged-in?
-        var $activatePageRedirect;
+        var $activateAccessControl;
+        var $allowedGroups;
+        var $disallowedGroups;
         var $pageRedirect;
         var $adminUserGroup;
         
@@ -246,11 +248,15 @@
             $this->wrapLinesOn = $this->ffConf["wrapLinesOn"] ? "on" : "off";
             $this->charSummary = $this->ffConf["charSummary"] ? $this->ffConf["charSummary"] : $conf['editorConfig.']['charSummary'];
 
-            // Redirect settings if no login is present and the user tries to edit the page
+            // Settings for Write Access control. Replaces older "Redirect settings".
+            // The admin can decide who can write to the WIKI. 
             // The user gets redirected to $this->pageRedirect
-            $this->activatePageRedirect = $this->ffConf["activatePageRedirect"] ? $this->ffConf["activatePageRedirect"] : false;
+            $this->activateAccessControl = $this->ffConf["activateAccessControl"] ? $this->ffConf["activateAccessControl"] : false;
+
+debugster ($this->ffConf);            $this->allowedGroups = $this->ffConf["allowedGroups"] ? $this->ffConf["allowedGroups"] : false;
+            $this->disallowedGroups = $this->ffConf["disallowedGroups"] ? $this->ffConf["disallowedGroups"] : false;
+            $this->pageRedirect = $this->ffConf["pageRedirect"] ? $this->ffConf["pageRedirect"] : false;
             $this->adminUserGroup = $this->ffConf["adminUserGroup"] ? $this->ffConf["adminUserGroup"] : false;
-            $this->pageRedirect = $this->ffConf["pageRedirect"] ? $this->ffConf["pageRedirect"] : $GLOBALS["TSFE"]->id;
             
             // Initialise extension template: Use std template if no FlexForm template is set:
             $this->templateCode = $this->ffConf["templatefile"] ? $this->cObj->fileResource("uploads/tx_drwiki/".$this->ffConf["templatefile"]) : $this->cObj->fileResource($this->conf["templateFile"]);
@@ -900,18 +906,33 @@
             // get NameSpacefor variables
             $getNS = preg_match_all( '/(.*)(:)(.*)/e', $this->piVars["keyword"] , $NSmatches );
             $this->currentNameSpace = $NSmatches[1][0];
-            
             // redirect if the wiki is only editable when a user is logged in
-            if ($this->activatePageRedirect AND ((!$GLOBALS["TSFE"]->fe_user->user["uid"] > 0))) {
-                 $parameters = array("redirect_url" => $this->pi_linkTP_keepPIvars_url(array("cmd" => "edit", "submit" => ""), 1, 0));	
-                 $content = '<div class="wiki-box-red">'.
+            if ( ($this->activateAccessControl) )                       // Access control active?
+            {   
+                if ( !$GLOBALS["TSFE"]->fe_user->user["uid"] > 0 )        // User is NOT logged in?
+                {
+                    $parameters = array("redirect_url" => $this->pi_linkTP_keepPIvars_url(array("cmd" => "edit", "submit" => ""), 1, 0));
+                    $link = ($this->pageRedirect) ? $this->pi_linkToPage('Log-In',$this->pageRedirect,'',$parameters) : '';
+                    
+                    $content = '<div class="wiki-box-red">'.
                  			$this->cObj->cObjGetSingle($this->conf["sys_Warning"], $this->conf["sys_Warning."]).
                  			$this->pi_getLL("pi_edit_login_warning", "Attention: You need to be logged-in ").
-							$this->pi_linkToPage('Log-In',$this->pageRedirect,'',$parameters).'<br/><br/></div>';
-				return $content;
-
+							$link.'<br/><br/></div>';
+				    return $content;
+                 }   
+                if (  ($this->allowedGroups == true) && (!inGroup ($this->allowedGroups))    // User is NOT in "Allowed Groups"?
+                     OR 
+                      ($this->disallowedGroups == true) && (inGroup ($this->disallowedGroups))  ) // User IS in "Disallowed Groups"?
+                {
+                    $parameters = array("redirect_url" => $this->pi_linkTP_keepPIvars_url(array("cmd" => "edit", "submit" => ""), 1, 0));	
+                    $content = '<div class="wiki-box-red">'.
+                 			$this->cObj->cObjGetSingle($this->conf["sys_Warning"], $this->conf["sys_Warning."]).
+                 			$this->pi_getLL("pi_edit_disallowed", "Sorry, you are not allowed to edit or create this article. Please talk to the administrator if you think this is an error.").
+							'<br/><br/></div>';
+				    return $content;
+                }
             }
-            else if ($this->piVars["submitCreate"] && !$this->read_only && !$this->read_only)
+            if ($this->piVars["submitCreate"] && !$this->read_only && !$this->read_only)
             {
                 // the user has filled out the form before, so we insert the
                 // data in the database and reset the pi-variables. Then we display
@@ -1161,12 +1182,35 @@
             }
             else
                 {
-                if ($this->activatePageRedirect AND ((!$GLOBALS["TSFE"]->fe_user->user["uid"] > 0))) {
-                     $content = '<div class="wiki-box-red">'.
+                if ( ($this->activateAccessControl) )                       // Access control active?
+                {   
+                    if ( !$GLOBALS["TSFE"]->fe_user->user["uid"] > 0 )        // User is NOT logged in?
+                    {
+                        $parameters = array("redirect_url" => $this->pi_linkTP_keepPIvars_url(array("cmd" => "edit", "submit" => ""), 1, 0));
+                        $link = ($this->pageRedirect) ? $this->pi_linkToPage('Log-In',$this->pageRedirect,'',$parameters) : '';
+                        
+                        $content = '<div class="wiki-box-red">'.
                      			$this->cObj->cObjGetSingle($this->conf["sys_Warning"], $this->conf["sys_Warning."]).
                      			$this->pi_getLL("pi_edit_login_warning", "Attention: You need to be logged-in ").
-								$this->pi_linkToPage('Log-In',$this->pageRedirect).'<br/><br/></div>';
-                }else{  
+    							$link.'<br/><br/></div>';
+    				    return $content;
+                     }   
+                    if (  ($this->allowedGroups == true) && (!inGroup ($this->allowedGroups))    // User is NOT in "Allowed Groups"?
+                         OR 
+                          ($this->disallowedGroups == true) && (inGroup ($this->disallowedGroups))  ) // User IS in "Disallowed Groups"?
+                    {
+                        $parameters = array("redirect_url" => $this->pi_linkTP_keepPIvars_url(array("cmd" => "edit", "submit" => ""), 1, 0));	
+                        $content = '<div class="wiki-box-red">'.
+                     			$this->cObj->cObjGetSingle($this->conf["sys_Warning"], $this->conf["sys_Warning."]).
+                     			$this->pi_getLL("pi_edit_disallowed", "Sorry, you are not allowed to edit or create this article. Please talk to the administrator if you think this is an error.").
+    							'<br/><br/></div>';
+    				    return $content;
+                    }
+                }                
+                
+                
+                
+                {  
                     // display the edit form
                     // TODO: take layout from template
     
@@ -3582,7 +3626,35 @@ function finalise_parse($str, $mode=0)
         }
  	}
  	
-} // end of DR_WIKI
+} 
+
+/**
+ * inGroup
+ *
+ * checks if a given userid (or the current user is none given) is in a given group (mostly a flexform field of the type "group") 
+ *
+ * @param	[string]		$groups: a comma separated list of group_id; mostly the flexform field of type "group" 
+ * @param	[string]		$user: the userid, if ommitted the currently logged in user is taken
+ * @return	[string]		true or false
+ */
+function inGroup ($groups, $user = -1)
+{
+    if ($user == -1) {
+    $user = $GLOBALS['TSFE']->fe_user->user[uid];
+   } 
+   if (is_string ($groups)) {
+     $groups =  split(',', $groups);
+   } 
+   foreach ($GLOBALS['TSFE']->fe_user->groupData['uid'] as $group)
+   {
+    if (in_array ($group, $groups)) {
+     return true;
+    }
+   }
+   return false;
+  } 
+
+// end of DR_WIKI
 
 if (defined("TYPO3_MODE") && $TYPO3_CONF_VARS[TYPO3_MODE]["XCLASS"]["ext/dr_wiki/pi1/class.tx_drwiki_pi1.php"])
 	{include_once($TYPO3_CONF_VARS[TYPO3_MODE]["XCLASS"]["ext/dr_wiki/pi1/class.tx_drwiki_pi1.php"]);}
