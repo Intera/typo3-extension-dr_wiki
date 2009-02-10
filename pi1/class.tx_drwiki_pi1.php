@@ -2147,38 +2147,29 @@
     */
         function substitutePlugins($str)
         {
-            // reset the array
-            reset($this->pluginArray);
-
+            // let's do it the regex way...
+            $unique = '23133214jlsdflj235l23j4l-plugin-';
             // go through the pluginarray and get name and object
             // the array is initialized in plugins/plugincfg.php
+            
             while (list($pluginName, $pluginObject) = each($this->pluginArray))
-            {
-                if (strpos($str, "###".$pluginName."###") > 0)
-                {
-                    // we have found an existend plugin-marker
-                    $subpart = $this->getSubpart($str, "###" . $pluginName . "###");
-                    if ($subpart === FALSE)
-                    {
-                        // it was only a marker, not a subpart (the second marker was not found)
-                    }
-                    else
-                        {
-                        $params = "";
-                        if ($subpart)
-                            {
-                            // the subpart has parameters, get them
-                            $params = explode("|", $subpart);
-                        }
-                        else
-                        {
-                            // no parameters given, get the default ones
-                            $params = $pluginObject->getDefaultParams();
-                        }
-                        // substitute the subpart with the plugin-content
-                        $str = $this->substituteSubpart($str, "###" . $pluginName . "###", $pluginObject->main($this, $params));
-                    }
+            { $pluginstr .= $pluginName . "|"; }
+            // match patterns
+            $numMatches = preg_match_all( '/\{\#\#\#('.$pluginstr.')\#\#\#\}(.*?)\{\#\#\#('.$pluginstr.')\#\#\#\}/xis', $str, $matches );
+            
+            for($i=0; $i<$numMatches; $i++){
+                $str = str_replace($matches[0][$i], $unique . $i, $str);
+                //check parameters
+                $params = '';
+                if ($matches[2][$i]) {
+	                // the plugin has parameters --> get them
+	                $params = explode("|", $matches[2][$i]);
+                } else {
+	                // no parameters given, get the default ones
+	                $params = $this->pluginArray[$matches[1][$i]]->getDefaultParams();
                 }
+                $dummy = $this->pluginArray[$matches[1][$i]]->main($this, $params);
+                $str = str_replace($unique . $i, $dummy, $str);
             }
             return $str;
         }
@@ -2201,8 +2192,6 @@
                 else {return false;}    		
             }
     	}
-
- 
 
 		/**
 		 * TODO: Get rid of http: to be shown without a link

@@ -12,7 +12,7 @@
 
 $EM_CONF[$_EXTKEY] = array(
 	'title' => 'DR Wiki - Typo3 Wiki extension',
-	'description' => 'Inserts an advanced Wiki into your page (MediaWiki compliant syntax). Contributions (sponsoring, code, etc.) are always welcome. For details, please visit http://www.myasterisk.de. Please report bugs at https://sourceforge.net/projects/dr-wiki.',
+	'description' => 'Inserts an advanced Wiki into your page (MediaWiki compliant syntax). For details, please visit http://drwiki.myasterisk.de.',
 	'category' => 'plugin',
 	'shy' => 0,
 	'dependencies' => 'cms',
