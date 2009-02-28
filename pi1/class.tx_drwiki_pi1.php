@@ -2,7 +2,7 @@
 /***************************************************************
 *  Copyright notice
 *
-*  (c) 2004-2008 Denis Royer (info@indigi.de)
+*  (c) 2004-2009 Denis Royer (info@indigi.de)
 *  All rights reserved
 *
 *  This script is part of the Typo3 project. The Typo3 project is
@@ -26,7 +26,7 @@
 *
 * @author Denis Royer <info@indigi.de>
 *
-* I've written this plugin for the EU founded project FIDIS (www.fidis.net)
+* I've written this plugin for the EU founded research project FIDIS (www.fidis.net)
 *
 * The idea and parts of the code for this plugin came from
 * several sources, including:
@@ -158,6 +158,9 @@
             'Category' => 'Category', // internal NS
             'Template' => 'Template', // internal NS
             );
+            
+        var $categoryIndex = array();
+        
         //ratings API Object
         var $ratingsApiObj=null;
         
@@ -1629,6 +1632,9 @@
             
             $markerArray["###BODY###"] = $wikiPageContent;
             
+            // add Category Footer
+            $markerArray["###CATEGORY###"] = $this->createCategoryFooter();
+            
             // check if caching is active - if yes: display cache ID (CID)
             if ($this->enableWikiCaching) {$cacheStr = " (CID: ". $this->internal["currentCache"]["cache_uid"] .")";}
                 else {$cacheStr = "";}
@@ -2021,7 +2027,7 @@
             
             $getNS = preg_match_all( '/(.*)(:)(.*)/', $keyword, $matchesNS );  
             $specificNS = $matchesNS[1][0];
-
+            $specificNSKeyword = $matchesNS[3][0];
 
             $word = $matchesNS[3][0] ? $matchesNS[3][0] : $keyword;            
             $LinkText = $matches[2][0] ? $matches[2][0] : $keyword;
@@ -2037,6 +2043,13 @@
             
             $this->piVars["pluginSEARCH"]["sword"] = "";
             $this->piVars["pluginSEARCH"]["submit"] = "";
+            
+            // handle Namespace Links differently, so they are later on displayed in the footer
+            if ($specificNS == $this->nameSpaces["Category"]) {
+                $categoryLink = $this->pi_linkTP_keepPIvars($specificNSKeyword, array("keyword" => $keyword, "showUid" => ""), 1, 0);
+            	$this->categoryIndex[$keyword] = array("keyword" => $specificNSKeyword, "specificNS" => $specificNS, "linkText" => $LinkText, "catgoryLink" => $categoryLink);
+            	return;
+            }            
             
             // check for external Links and InterWiki links, but exclude real namespaces
             // uses the $specificNS function for checking Namespaces
@@ -3530,6 +3543,20 @@ function parse($str, $mode=0)
     
     return $str;
 }
+
+function createCategoryFooter () {
+	// re-insert category links into the page
+	$categoryFooter = '';
+	if ($this->categoryIndex) {
+	    foreach ( $this->categoryIndex as $catEntry ) {
+	    	$categoryFooter .= $catEntry['catgoryLink'] . ' | ';
+	    }
+	    $categoryFooter = substr($categoryFooter, 0 , strlen($categoryFooter)-2);
+	}
+    
+    return $categoryFooter;
+}
+
 /**
  * finalise_parse
  *
@@ -3576,7 +3603,7 @@ function finalise_parse($str, $mode=0)
         		$str = str_replace($matches[0][$i], $this->linkKeyword($matches[1][$i],$matches[3][$i]), $str);
         	}        	
     }
-
+    
     // Save-HTML Mode. The internal Markups are removed.
     if ($mode==1) {
     // TODO: Add link wrap for non-wiki output (FlexForms)

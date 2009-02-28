@@ -52,7 +52,7 @@ class tx_drwiki_pi1_plugin {
         	$dummy .= $pluginName . '|';
         }
         //delete last "|" of the string
-        $this->pluginString = substr($dummy, 0 , strlen($string)-1); 
+        $this->pluginString = substr($dummy, 0 , strlen($dummy)-1); 
         
         return $this->pluginString;
     }
