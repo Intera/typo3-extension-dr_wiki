@@ -69,6 +69,7 @@
 
         // Array of installed Plugins
         var $pluginArray = array();
+        var $pluginList = '';
         // Code of the template
         var $templateCode = "";
         // Global Configuration Array for TS configuration
@@ -289,6 +290,7 @@
             // Not nice, but functional :-) Loads the plugin-array
             // from the global variable $pluginArray defined in plugins/plugincfg.php
             $this->pluginArray = $myPluginArray->getPlugIns();
+            $this->pluginList = $myPluginArray->getPluginString();
             
             // Load the ratings API if enabled
 	        if (t3lib_extMgm::isLoaded('ratings')) {
@@ -2149,14 +2151,9 @@
         {
             // let's do it the regex way...
             $unique = '23133214jlsdflj235l23j4l-plugin-';
-            // go through the pluginarray and get name and object
-            // the array is initialized in plugins/plugincfg.php
             
-            while (list($pluginName, $pluginObject) = each($this->pluginArray))
-            { $pluginstr .= $pluginName . "|"; }
             // match patterns
-            $numMatches = preg_match_all( '/\{\#\#\#('.$pluginstr.')\#\#\#\}(.*?)\{\#\#\#('.$pluginstr.')\#\#\#\}/xis', $str, $matches );
-            
+            $numMatches = preg_match_all( '/\{\#\#\#('.$this->pluginList.')\#\#\#\}(.*?)\{\#\#\#('.$this->pluginList.')\#\#\#\}/xis', $str, $matches );
             for($i=0; $i<$numMatches; $i++){
                 $str = str_replace($matches[0][$i], $unique . $i, $str);
                 //check parameters

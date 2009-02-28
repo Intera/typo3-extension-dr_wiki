@@ -38,11 +38,25 @@
 class tx_drwiki_pi1_plugin {
 
      // The array for Plugin Objects
-
+	
+	var $pluginArray = array();
+	var $pluginString = '';
+	
     function tx_drwiki_pi1_plugin (){
         return TRUE;
     }
-
+	
+    function getPluginString (){
+        foreach($this->pluginArray as $pluginName => $pluginObject)
+        {
+        	$dummy .= $pluginName . '|';
+        }
+        //delete last "|" of the string
+        $this->pluginString = substr($dummy, 0 , strlen($string)-1); 
+        
+        return $this->pluginString;
+    }
+    
     function getPlugIns() {
         $pluginArray = array();
 
@@ -53,7 +67,7 @@ class tx_drwiki_pi1_plugin {
         // Example: 	{###SEARCH###}{###SEARCH###}
 
         include_once(dirname(__FILE__) ."/search.php");
-        $pluginArray["SEARCH"] = new tx_drwiki_pi1_search;
+        $this->pluginArray["SEARCH"] = new tx_drwiki_pi1_search;
 
         // Include the LastChanges-Plugin
         // Description:	Inserts a list of the pages changed in the last [days] days.
@@ -63,22 +77,22 @@ class tx_drwiki_pi1_plugin {
         //		        Displays the pages changed in the last 7 days
 
         include_once(dirname(__FILE__) ."/last_changed.php");
-        $pluginArray["LASTCHANGED"] = new tx_drwiki_pi1_last_changed;
+        $this->pluginArray["LASTCHANGED"] = new tx_drwiki_pi1_last_changed;
 
         include_once(dirname(__FILE__) ."/indexlist.php");
-        $pluginArray["INDEXLIST"] = new tx_drwiki_pi1_indexlist;
+        $this->pluginArray["INDEXLIST"] = new tx_drwiki_pi1_indexlist;
 
         include_once(dirname(__FILE__) ."/author.php");
-        $pluginArray["AUTHOR"] = new tx_drwiki_pi1_author;
+        $this->pluginArray["AUTHOR"] = new tx_drwiki_pi1_author;
 
         include_once(dirname(__FILE__) ."/template_list.php");
-        $pluginArray["TEMPLATELIST"] = new tx_drwiki_pi1_templatelist;
+        $this->pluginArray["TEMPLATELIST"] = new tx_drwiki_pi1_templatelist;
 
         include_once(dirname(__FILE__) ."/ratings.php");
-        $pluginArray["RATINGS"] = new tx_drwiki_pi1_ratings;
+        $this->pluginArray["RATINGS"] = new tx_drwiki_pi1_ratings;
 
         include_once(dirname(__FILE__) ."/most_rated.php");
-        $pluginArray["MOSTRATED"] = new tx_drwiki_pi1_mostrated;
+        $this->pluginArray["MOSTRATED"] = new tx_drwiki_pi1_mostrated;
 
         // Include the BackLinks-Plugin
         // Description:	Inserts a list of the pages that link to this page (or defined page).
@@ -87,23 +101,23 @@ class tx_drwiki_pi1_plugin {
         // Example: {###BACKLINKS###}Citation{###BACKLINKS###}
         // Displays the pages that link to the Citation wiki page.
         include_once(dirname(__FILE__) ."/backlink.php");
-        $pluginArray["BACKLINKS"] = new tx_drwiki_pi1_backlink;
+        $this->pluginArray["BACKLINKS"] = new tx_drwiki_pi1_backlink;
 
         include_once(dirname(__FILE__) ."/categoryindex.php");
-        $pluginArray["CATEGORYINDEX"] = new tx_drwiki_pi1_categoryindex;
+        $this->pluginArray["CATEGORYINDEX"] = new tx_drwiki_pi1_categoryindex;
 
         include_once(dirname(__FILE__) ."/create.php");
-        $pluginArray["CREATE"] = new tx_drwiki_pi1_create;
+        $this->pluginArray["CREATE"] = new tx_drwiki_pi1_create;
 
         include_once(dirname(__FILE__) ."/keyword_index.php");
-        $pluginArray["KEYWORDINDEX"] = new tx_drwiki_pi1_keyword_index;
+        $this->pluginArray["KEYWORDINDEX"] = new tx_drwiki_pi1_keyword_index;
 
          // Bilder innerhalb des Wikis einfügen
-//        include_once(dirname(__FILE__) ."/picture.php");
-//        $pluginArray["BILD"] = new tx_drwiki_pi1_picture;
+        //include_once(dirname(__FILE__) ."/picture.php");
+        //$this->pluginArray["IMAGE"] = new tx_drwiki_pi1_picture;
 
          // Liest alle Plugin-Dateien automatisch ein, welche mit "private" beginnen.
-         // Damit können individuelle Plugins erstellt werden.
+         // Damit k�nnen individuelle Plugins erstellt werden.
         if ($handle = opendir(dirname(__FILE__))) {
           while (false !== ($file = readdir($handle))) {
             if (substr($file, 0, 7) =="private") {
@@ -113,7 +127,7 @@ class tx_drwiki_pi1_plugin {
           closedir($handle);
         }
 
-        return $pluginArray;
+        return $this->pluginArray;
     }
 }
 ?>
