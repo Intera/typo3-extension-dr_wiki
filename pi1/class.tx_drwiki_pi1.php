@@ -3548,10 +3548,12 @@ function createCategoryFooter () {
 	// re-insert category links into the page
 	$categoryFooter = '';
 	if ($this->categoryIndex) {
+	    $categoryFooter = '<div class="wiki-box-yellow"> Related Categories: [ ';
 	    foreach ( $this->categoryIndex as $catEntry ) {
 	    	$categoryFooter .= $catEntry['catgoryLink'] . ' | ';
 	    }
 	    $categoryFooter = substr($categoryFooter, 0 , strlen($categoryFooter)-2);
+	    $categoryFooter .=' ]</div>';
 	}
     
     return $categoryFooter;
