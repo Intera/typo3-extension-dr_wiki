@@ -26,6 +26,10 @@ class tx_drwiki_pi1_categoryindex {
 	  	return $content;
 	}
 
+	function createLink($keyword, $namespace) {
+		
+	}
+
 	/**
 	 * Format a list of articles chunked by letter, either as a
 	 * bullet list or a columnar format, depending on the length.
