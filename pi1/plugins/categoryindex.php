@@ -4,13 +4,16 @@
 // Alphabetical listing was inspired by MediaWiki's code
 
 class tx_drwiki_pi1_categoryindex {
-		
+	
+	var $object;
+	
 	function getDefaultParams(){
 		return array('');
 	}
 	
 	function main($object, $params){
     $entrykey = $params[0];
+    $this->object = $object;
     if ($entrykey=='') { 
     	$entrykey = $object->piVars["keyword"];
     } else {
@@ -20,16 +23,45 @@ class tx_drwiki_pi1_categoryindex {
 		$results = $object->getWikiInfos("keyword" ,TRUE, FALSE, TRUE, " AND tx_drwiki_pages.body LIKE '%[[".$GLOBALS['TYPO3_DB']->quoteStr($entrykey,'tx_drwiki_pages')."%'");
         
         if ($results){
-	        	$content = $this->formatList($results);
+	        foreach($results as $item) {        	
+	        	$getNS = preg_match_all( '/(.*)(:)(.*)/', $item["keyword"], $matchesNS );
+	        	// get Namespace entry
+	            $catNS = $matchesNS[1][0];
+	            //get actual keyword, depending on active Namespace
+	            if ($matchesNS[3][0]) $catWord = $matchesNS[3][0];
+	            	else $catWord = $item["keyword"];
+	            //build array
+	            $rowArray[] = array("keyword" => $catWord, "namespace" =>$catNS);
+	            
+	            // get array containing the kewords w/o Namespace for sorting
+				foreach ($rowArray as $key => $row) {
+				    $keywordArr[$key]    = $row['keyword'];
+				}	            
+	            
+	        }
+	        	// make keword array w/o Namespace lowercase, so case-in-sensitive sorting
+	        	// is bossible, as array_multisort sorts case-sensitive
+	        	$array_lowercase = array_map('strtolower', $keywordArr);
+	        	array_multisort($array_lowercase, SORT_ASC, $rowArray);
+	        	$content = $this->formatList($rowArray);
         }
 	
 	  	return $content;
 	}
 
 	function createLink($keyword, $namespace) {
-		
-	}
+		if ($namespace) {
+			$linkTitle = $keyword . ' (' . $namespace .')';
+			$linkKeyword = $namespace . ':' . $keyword;
+		} else {
+			$linkTitle = $keyword;
+			$linkKeyword = $keyword;
+		}
 
+		return $link =$this->object->pi_linkTP_keepPIvars(htmlspecialchars($linkTitle), array("keyword" => htmlspecialchars($linkKeyword), "showUid" => ""), 1, 0);
+
+	}
+	
 	/**
 	 * Format a list of articles chunked by letter, either as a
 	 * bullet list or a columnar format, depending on the length.
@@ -96,7 +128,7 @@ class tx_drwiki_pi1_categoryindex {
 					$prev_start_char = strtoupper($articles[$index]["keyword"]{0});
 				}
 
-				$r .= "<li>[[".$articles[$index]["keyword"]."]]</li>\n";
+				$r .= "<li>".$this->createLink($articles[$index]["keyword"],$articles[$index]["namespace"])."</li>\n";
 			}
 			if( !$atColumnTop ) {
 				$r .= "</ul>\n";
@@ -117,7 +149,7 @@ class tx_drwiki_pi1_categoryindex {
 	 */
 	function shortList( $articles ) {
 		$r = "<h4>" . htmlspecialchars( strtoupper($articles[0]["keyword"]{0}) ) . "</h4>\n";
-		$r .= "<ul><li>[[".$articles[0]["keyword"]."]]</li>\n";
+		$r .= "<ul><li>".$this->createLink($articles[0]["keyword"],$articles[0]["namespace"])."</li>\n";
 		for ($index = 1; $index < count($articles); $index++ )
 		{
 			if (strtoupper($articles[$index]["keyword"]{0}) != strtoupper($articles[$index-1]["keyword"]{0}))
@@ -125,7 +157,7 @@ class tx_drwiki_pi1_categoryindex {
 				$r .= "</ul><h4>" . htmlspecialchars( strtoupper($articles[$index]["keyword"]{0}) ) . "</h4>\n<ul>";
 			}
 
-			$r .= "<li>[[".$articles[$index]["keyword"]."]]</li>\n";
+			$r .= "<li>".$this->createLink($articles[$index]["keyword"],$articles[$index]["namespace"])."</li>\n";
 		}
 		$r .= "</ul>";
 		return $r;
