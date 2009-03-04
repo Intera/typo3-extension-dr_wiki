@@ -1,40 +1,36 @@
 <?php
-// Returns a list of the pages that are in this category (default)
-// or the category defined in the parameter.
-// Alphabetical listing was inspired by MediaWiki's code
+/*
+ * Created on 04.03.2009
+ *
+ * To change the template for this generated file go to
+ * Window - Preferences - PHPeclipse - PHP - Code Templates
+ */
 
-class tx_drwiki_pi1_categoryindex {
+class tx_drwiki_pi1_indexListFormatter {
 	
 	var $object;
 	
-	function getDefaultParams(){
-		return array('');
+	function tx_drwiki_pi1_indexListFormatter () {
+		
 	}
 	
-	function main($object, $params){
-    $entrykey = $params[0];
-    $this->object = $object;
-    if ($entrykey=='') { 
-    	$entrykey = $object->piVars["keyword"];
-    } else {
-    	$entrykey = 'Category:'.$entrykey;
-    }
-     
-		$results = $object->getWikiInfos("keyword" ,TRUE, FALSE, TRUE, " AND tx_drwiki_pages.body LIKE '%[[".$GLOBALS['TYPO3_DB']->quoteStr($entrykey,'tx_drwiki_pages')."%'");
+	function main($object, $category){
+     	$this->object = $object;
+     	
+		$results = $object->getWikiInfos("keyword" ,TRUE, FALSE, TRUE, " AND tx_drwiki_pages.body LIKE '%[[".$GLOBALS['TYPO3_DB']->quoteStr($category,'tx_drwiki_pages')."%'");
         
         if ($results){
 	        foreach($results as $item) {        	
 	        	// prevent adding Category into itself
 	        	if ($item["keyword"] == $this->object->piVars["keyword"]) continue;
-	        	$getNS = preg_match_all( '/(.*)(:)(.*)/', $item["keyword"], $matchesNS );
+	        	
 	        	// get Namespace entry
-	            $catNS = $matchesNS[1][0];
+	            $catNS = $object->getNameSpace($item["keyword"]);
+	            $catWord = $object->getKeywordFromNameSpace($item["keyword"]);
 	            //get actual keyword, depending on active Namespace
-	            if ($matchesNS[3][0]) $catWord = $matchesNS[3][0];
-	            	else $catWord = $item["keyword"];
+	            if (!$catWord) $catWord = $item["keyword"];
 	            //build array
 	            $rowArray[] = array("keyword" => $catWord, "namespace" =>$catNS);
-	            
 	            // get array containing the kewords w/o Namespace for sorting
 				foreach ($rowArray as $key => $row) {
 				    $keywordArr[$key]    = $row['keyword'];
@@ -60,7 +56,7 @@ class tx_drwiki_pi1_categoryindex {
 			$linkKeyword = $keyword;
 		}
 
-		return $link =$this->object->pi_linkTP_keepPIvars(htmlspecialchars($linkTitle), array("keyword" => htmlspecialchars($linkKeyword), "showUid" => ""), 1, 0);
+		return $link = $this->object->pi_linkTP_keepPIvars(htmlspecialchars($linkTitle), array("keyword" => htmlspecialchars($linkKeyword), "showUid" => ""), 1, 0);
 
 	}
 	

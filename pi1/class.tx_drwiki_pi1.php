@@ -46,7 +46,10 @@
     // get path of the extension
     $ext_path = t3lib_extMgm::extPath('dr_wiki');
     require_once(PATH_tslib.'class.tslib_pibase.php'); 
+    //Load HTML Sanitizer Class
     require_once(t3lib_extMgm::extPath('dr_wiki').'lib/class.html_sanitizer.php');
+    //Load Index List formattinf Class for Categories
+    require_once(t3lib_extMgm::extPath('dr_wiki').'lib/class.wiki.createIndexList.php');
 
     // Ratings API if enabled;
 	if (t3lib_extMgm::isLoaded('ratings')) {
@@ -144,6 +147,9 @@
         //html sanitizer object 
         var $sanitizer;
         
+        //Index List formatting object
+        var $indexListFormatter;
+        
         // Definition of Namespaces and InterWiki links
         // Todo: Integrate Namespaces and expand configuration array (ext, hide NS)
        var $currentNameSpace = ""; 
@@ -190,6 +196,9 @@
             
             // Initialise plug-in array
             $myPluginArray  = new tx_drwiki_pi1_plugin();
+            
+            // Initialise Index List formatting object
+            $this->indexListFormatter = new tx_drwiki_pi1_indexListFormatter();
             
             // Load language and initialise local language settings
             $this->pi_loadLL();
@@ -403,12 +412,25 @@
 
                 $this->piVars["keyword"] = $this->wikiHomePage;
             }
-
+			
+			/*ToDo: Override "Category" to directly display the respective Category page
+			 * Code below causes errors
+			 *
+			 * Idea: Check if category page exists and create it on the fly.
+			 */
+			 
+			/*$kewordCategory = $this->getNameSpace($this->piVars["keyword"]);
+			if ($kewordCategory == $this->nameSpaces["Category"]) {
+				return $this->singleView($content, $conf);
+			}
+			*/
+			
             if (($this->keywordExists($this->piVars["keyword"]) == NULL || $this->piVars["cmd"] == "new") && !$this->piVars["showUid"]) {
-                // the keyword to display doesn't exist or we want to create
-                // a new page and no uid to display is given..
-                // and the wiki is not in read-only mode
-                // ... then we display the createview
+                /* the keyword to display doesn't exist or we want to create
+                 * a new page and no uid to display is given..
+                 * and the wiki is not in read-only mode
+                 * ... then we display the createview
+                 */
                 if (!$this->read_only) {return $this->createView($content, $conf);}
                 else {
                     $this->piVars["keyword"] = $this->wikiHomePage;
@@ -1552,7 +1574,7 @@
             	$numRedirect = preg_match_all( '/\#REDIRECT \[\[(.*?)\]\]/e', $this->getFieldContent("body"), $redirects );
             }
 
-            // get NameSpacefor variables
+            // get Namespace for variables
             $getNS = preg_match_all( '/(.*)(:)(.*)/e', $this->piVars["keyword"] , $NSmatches );
             $this->currentNameSpace = $NSmatches[1][0];
             
@@ -1634,6 +1656,11 @@
             
             // add Category Footer
             $markerArray["###CATEGORY###"] = $this->createCategoryFooter();
+            
+            // add Category Listing
+            if ($this->currentNameSpace == $this->nameSpaces["Category"])
+            	$markerArray["###CATEGORYLIST###"] = $this->indexListFormatter->main($this,$this->piVars["keyword"]);
+            else $markerArray["###CATEGORYLIST###"] = '';
             
             // check if caching is active - if yes: display cache ID (CID)
             if ($this->enableWikiCaching) {$cacheStr = " (CID: ". $this->internal["currentCache"]["cache_uid"] .")";}
@@ -1992,6 +2019,18 @@
 			$db->exec_UPDATEquery("tx_drwiki_pages",$where,$what);
         }     
         
+        function getNameSpace ($keyword) {
+        	$getNS = preg_match_all( '/(.*)(:)(.*)/', $keyword, $matchesNS );
+	        // return Namespace entry
+	            return $matchesNS[1][0];
+        }
+        
+       function getKeywordFromNameSpace ($keyword) {
+        	$getNS = preg_match_all( '/(.*)(:)(.*)/', $keyword, $matchesNS );
+	        // return Namespace entry
+	            return $matchesNS[3][0];
+        }
+        
         function isNameSpace($namespace){
             $dummy = "";
             $dummy = $this->nameSpaces[$namespace];
@@ -2044,12 +2083,20 @@
             $this->piVars["pluginSEARCH"]["sword"] = "";
             $this->piVars["pluginSEARCH"]["submit"] = "";
             
-            // handle Namespace Links differently, so they are later on displayed in the footer
-            if ($specificNS == $this->nameSpaces["Category"]) {
-                $categoryLink = $this->pi_linkTP_keepPIvars($specificNSKeyword, array("keyword" => $keyword, "showUid" => ""), 1, 0);
-            	$this->categoryIndex[$keyword] = array("keyword" => $specificNSKeyword, "specificNS" => $specificNS, "linkText" => $LinkText, "catgoryLink" => $categoryLink);
+            
+            // handle Category Links differently, so they are later on displayed in the footer
+            // Check if the $keyword is a category and also check if $keyword is 
+            // the current page keyword --> if yes, just remove the link in order to not have circular
+            // categories, which can cause problems
+            if ($specificNS == $this->nameSpaces["Category"] and $keyword != $this->piVars["keyword"]) {
+                // prevent double occurences of categories in footer array AND
+                // empty Category entries
+                if (!in_array($keyword, $this->categoryIndex) AND $word != $this->nameSpaces["Category"].':') {
+	                $categoryLink = $this->pi_linkTP_keepPIvars($specificNSKeyword, array("keyword" => $keyword, "showUid" => ""), 1, 0);
+	            	$this->categoryIndex[$keyword] = array("keyword" => $specificNSKeyword, "specificNS" => $specificNS, "linkText" => $LinkText, "catgoryLink" => $categoryLink);
+                } else return;        	
             	return;
-            }            
+            } else if ($specificNS == $this->nameSpaces["Category"] and $keyword == $this->piVars["keyword"]) return;     
             
             // check for external Links and InterWiki links, but exclude real namespaces
             // uses the $specificNS function for checking Namespaces
@@ -3548,7 +3595,7 @@ function createCategoryFooter () {
 	// re-insert category links into the page
 	$categoryFooter = '';
 	if ($this->categoryIndex) {
-	    $categoryFooter = '<div class="wiki-box-yellow"> Related Categories: [ ';
+	    $categoryFooter = '<div class="wiki-box-catlinks"> Related Categories: [ ';
 	    foreach ( $this->categoryIndex as $catEntry ) {
 	    	$categoryFooter .= $catEntry['catgoryLink'] . ' | ';
 	    }
