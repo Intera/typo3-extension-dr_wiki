@@ -413,17 +413,30 @@
                 $this->piVars["keyword"] = $this->wikiHomePage;
             }
 			
-			/*ToDo: Override "Category" to directly display the respective Category page
-			 * Code below causes errors
-			 *
-			 * Idea: Check if category page exists and create it on the fly.
-			 */
-			 
-			/*$kewordCategory = $this->getNameSpace($this->piVars["keyword"]);
-			if ($kewordCategory == $this->nameSpaces["Category"]) {
-				return $this->singleView($content, $conf);
-			}
-			*/
+			//Check if category page exists and create it on the fly. 
+			$kewordCategory = $this->getNameSpace($this->piVars["keyword"]);
+			if ($kewordCategory == $this->nameSpaces["Category"] AND !$this->keywordExists($this->piVars["keyword"])) {
+				$pageContent = array(
+	                        'pid' => $this->storagePid,
+	                        'crdate' => time(),
+	                        'tstamp' => time(),
+	                        'summary' => $this->piVars['summary'],
+	                        'keyword' => trim($this->piVars['keyword']),
+	                        'body' => '='.$this->nameSpaces["Category"]. ': '.$this->getKeywordFromNameSpace(trim($this->piVars['keyword'])).'=',
+	                        'date' => $this->piVars['date'],
+	                        'author' => 'Category Creator',
+	                    );
+	            // HOOK: insert only if hook returns OK or is not set
+	            if($this->hook_submit_beforeInsert($pageContent)){
+	                $res = $GLOBALS['TYPO3_DB']->exec_INSERTquery(
+	                    'tx_drwiki_pages',
+	                    $pageContent
+	                );
+	        	}
+	        	// HOOK: to do something after insert
+	        	$this->hook_submit_afterInsert($pageContent);
+ 			}
+			
 			
             if (($this->keywordExists($this->piVars["keyword"]) == NULL || $this->piVars["cmd"] == "new") && !$this->piVars["showUid"]) {
                 /* the keyword to display doesn't exist or we want to create
@@ -3311,7 +3324,6 @@ function doTableStuff ($t )
         $query .= " WHERE tx_drwiki_pages.pid IN (".$pidList.")".chr(10). $this->cObj->enableFields("tx_drwiki_pages").chr(10);
         $query .= $addWhereStatements;
         if ($keyword) {$query .= " AND keyword = '" . trim($keyword) . "'";}
-        
         $res = $GLOBALS['TYPO3_DB']->sql_query($query);
         $i = 0;
         while ($row = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res)) {
@@ -3596,6 +3608,10 @@ function createCategoryFooter () {
 	$categoryFooter = '';
 	if ($this->categoryIndex) {
 	    $categoryFooter = '<div class="wiki-box-catlinks"> Related Categories: [ ';
+	    // sort Array case-insensitive
+	    $keywordArr = $this->categoryIndex;
+	    $array_lowercase = array_map('strtolower', $keywordArr);
+	    array_multisort($array_lowercase, SORT_ASC, $this->categoryIndex);
 	    foreach ( $this->categoryIndex as $catEntry ) {
 	    	$categoryFooter .= $catEntry['catgoryLink'] . ' | ';
 	    }
