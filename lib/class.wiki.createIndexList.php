@@ -19,38 +19,42 @@ class tx_drwiki_pi1_indexListFormatter {
      	
      	/* Checked Query, but it seems to not get/check the whole body :-(
      	 * Experimental Code...
-     	 */
      	 
-     	 /*
-		Select keyword FROM
-		(Select pid, deleted, hidden, keyword, MAX(uid) AS uid, body from tx_drwiki_pages GROUP by keyword  ORDER BY uid DESC) as derivedTable
-		WHERE derivedTable.pid IN (1)
-		AND derivedTable.deleted=0 AND derivedTable.hidden=0
-		AND derivedTable.body LIKE '%[[Category:Hiolla%'
-     	
-     	
+     	 
+     	 
+		Select uid,keyword from tx_drwiki_pages
+		where tx_drwiki_pages.uid IN (Select MAX(uid) AS uid from tx_drwiki_pages GROUP by keyword  ORDER BY uid DESC)
+		AND tx_drwiki_pages.body LIKE '%[[Category:%'
+     	*/
+   	
      	//Select pid, deleted, hidden, keyword, MAX(uid) AS uid, body from tx_drwiki_pages GROUP by keyword  ORDER BY uid DESC
      	$pidList = $this->object->pi_getPidList($this->object->conf["pidList"], $this->object->conf["recursive"]);
+     	$enabledFields = $this->object->cObj->enableFields("tx_drwiki_pages");
+     	
+     	$whereString = "tx_drwiki_pages.pid IN (".$pidList.") ". $enabledFields .
+     				   " AND tx_drwiki_pages.uid IN (Select MAX(uid) AS uid from tx_drwiki_pages WHERE tx_drwiki_pages.pid IN (".$pidList.")".$enabledFields." GROUP by keyword ORDER BY uid DESC)".
+                       " AND tx_drwiki_pages.body LIKE '%[[".$GLOBALS['TYPO3_DB']->quoteStr($category,'tx_drwiki_pages')."%'";	
+     	
      	$res = $GLOBALS['TYPO3_DB']->exec_SELECTquery(
-			'keyword,body,MAX(uid) AS uid',
-			'tx_drwiki_pages',
-            'tx_drwiki_pages.pid IN ('.$pidList.')'.$this->object->cObj->enableFields("tx_drwiki_pages"),
-            'keyword',
-			'uid DESC');
-            $row = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res);
-            
+			"keyword,uid",
+			"tx_drwiki_pages",
+            $whereString
+        );
+        
+        $results = array();
+
         while ($row = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res)) {
-            $result[] = $row;
-            debug($row);
+            $results[] = $row;
         }
-     	*/
+     	
 		   //$results = $object->getWikiInfos("keyword, MAX( uid ) AS uid" ,TRUE, "", TRUE, " AND tx_drwiki_pages.body LIKE '%[[".$GLOBALS['TYPO3_DB']->quoteStr($category,'tx_drwiki_pages')."%' GROUP BY keyword");
-		   $results = $object->getWikiInfos("keyword" ,TRUE, FALSE, TRUE, " AND tx_drwiki_pages.body LIKE '%[[".$GLOBALS['TYPO3_DB']->quoteStr($category,'tx_drwiki_pages')."%'");
+		   //$results = $object->getWikiInfos("keyword" ,TRUE, FALSE, TRUE, " AND tx_drwiki_pages.body LIKE '%[[".$GLOBALS['TYPO3_DB']->quoteStr($category,'tx_drwiki_pages')."%'");
         
         if ($results){
+	        $isNameSpace = $this->object->isNameSpace($this->object->getNameSpace($this->object->piVars["keyword"]));
 	        foreach($results as $item) {        	
 	        	// prevent adding Category into itself
-	        	if ($item["keyword"] == $this->object->piVars["keyword"]) continue;
+	        	if ($item["keyword"] == $this->object->piVars["keyword"] AND $isNameSpace) continue;
 	        	
 	        	// get Namespace entry
 	            $catNS = $object->getNameSpace($item["keyword"]);

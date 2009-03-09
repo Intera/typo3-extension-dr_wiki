@@ -19,13 +19,35 @@ class tx_drwiki_pi1_categoryindex {
     } else {
     	$entrykey = 'Category:'.$entrykey;
     }
-     
-		$results = $object->getWikiInfos("keyword" ,TRUE, FALSE, TRUE, " AND tx_drwiki_pages.body LIKE '%[[".$GLOBALS['TYPO3_DB']->quoteStr($entrykey,'tx_drwiki_pages')."%'");
+     	
+     	//get Category entries
+	 	$pidList = $this->object->pi_getPidList($this->object->conf["pidList"], $this->object->conf["recursive"]);
+	 	$enabledFields = $this->object->cObj->enableFields("tx_drwiki_pages");
+	 	
+	 	$whereString = "tx_drwiki_pages.pid IN (".$pidList.") ". $enabledFields .
+	 				   " AND tx_drwiki_pages.uid IN (Select MAX(uid) AS uid from tx_drwiki_pages WHERE tx_drwiki_pages.pid IN (".$pidList.")".$enabledFields." GROUP by keyword ORDER BY uid DESC)".
+	                   " AND tx_drwiki_pages.body LIKE '%[[".$GLOBALS['TYPO3_DB']->quoteStr($entrykey,'tx_drwiki_pages')."%'";	
+	 	
+	 	$res = $GLOBALS['TYPO3_DB']->exec_SELECTquery(
+			"keyword,uid",
+			"tx_drwiki_pages",
+	        $whereString
+	    );
+	    
+	    $results = array();
+	
+	    while ($row = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res)) {
+	        $results[] = $row;
+	    }
+
+		// old result set --> deprectated
+		//$results = $object->getWikiInfos("keyword" ,TRUE, FALSE, TRUE, " AND tx_drwiki_pages.body LIKE '%[[".$GLOBALS['TYPO3_DB']->quoteStr($entrykey,'tx_drwiki_pages')."%'");
         
         if ($results){
+	        $isNameSpace = $this->object->isNameSpace($this->object->getNameSpace($this->object->piVars["keyword"]));
 	        foreach($results as $item) {        	
 	        	// prevent adding Category into itself
-	        	if ($item["keyword"] == $this->object->piVars["keyword"]) continue;
+	        	if ($item["keyword"] == $this->object->piVars["keyword"] AND $isNameSpace) continue;
 	        	$getNS = preg_match_all( '/(.*)(:)(.*)/', $item["keyword"], $matchesNS );
 	        	// get Namespace entry
 	            $catNS = $matchesNS[1][0];
