@@ -1018,10 +1018,6 @@
                     )
                 );
                 
-                if ($this->mailNotify) {
-                	$this->mailAdmin($GLOBALS['TYPO3_DB']->sql_insert_id());
-                }
-
                 $this->piVars["cmd"] = "";
                 $this->piVars["section"] = "";
                 $this->piVars["body"] = "";
@@ -1033,7 +1029,11 @@
                 $this->piVars["showUid"] = "";
                 $this->piVars["referer"] = "";
                 $this->piVars["pluginSEARCH"]["sword"] = "";
-                $this->piVars["pluginSEARCH"]["submit"] = "";
+                $this->piVars["pluginSEARCH"]["submit"] = "";   
+                            
+                if ($this->mailNotify) {
+                	$this->mailAdmin($GLOBALS['TYPO3_DB']->sql_insert_id(), $pageContent['body']);
+                }
 
                 return $this->singleView($content, $conf);
             } else {
@@ -1142,21 +1142,8 @@
 	                            'locked' => $isLocked,
 	                            'hidden' => $this->mailNotify,
 	                        );
-	                // HOOK: insert only if hook returns OK or is not set
-	                if($this->hook_submit_beforeInsert($pageContent)){
-	                    $res = $GLOBALS['TYPO3_DB']->exec_INSERTquery(
-	                        'tx_drwiki_pages',
-	                        $pageContent
-	                    );
-	                    
-		                if ($this->mailNotify) {
-		                	$this->mailAdmin($GLOBALS['TYPO3_DB']->sql_insert_id());
-		                }	                    
-                	}
-                	// HOOK: to do something after insert
-                	$this->hook_submit_afterInsert($pageContent);
-                	
-					//TODO: Check if unset aray could be done more efficint
+	                        
+	                //TODO: Check if unset aray could be done more efficint
                 	$this->piVars["cmd"] = "";
             		$this->piVars["section"] = "";
                 	$this->piVars["body"] = "";
@@ -1170,6 +1157,20 @@
                 	$this->piVars["latest"] = "";
                     $this->piVars["pluginSEARCH"]["sword"] = "";
                     $this->piVars["pluginSEARCH"]["submit"] = "";
+                    
+	                // HOOK: insert only if hook returns OK or is not set
+	                if($this->hook_submit_beforeInsert($pageContent)){
+	                    $res = $GLOBALS['TYPO3_DB']->exec_INSERTquery(
+	                        'tx_drwiki_pages',
+	                        $pageContent
+	                    );
+	                    
+		                if ($this->mailNotify) {
+		                	$this->mailAdmin($GLOBALS['TYPO3_DB']->sql_insert_id(), $pageContent['body']);
+		                }	                    
+                	}
+                	// HOOK: to do something after insert
+                	$this->hook_submit_afterInsert($pageContent);
 
                 	return $this->singleView($content, $conf);
                 } else {  // changes are detected....
@@ -3744,8 +3745,9 @@ function finalise_parse($str, $mode=0)
 	 *
 	 * @param	[int]	id of new entry
 	 */
-	function mailAdmin($lastID) {
+	function mailAdmin($lastID, $text = "") {
 		
+		$text = $this->parse($text, 1);
 		$mail = t3lib_div::makeInstance('t3lib_htmlmail');
 		$mail->recipient = $mail->recipient = $this->mailRecipient;
 		$mail->subject = $mail->subject = $this->mailSubject; 
@@ -3757,8 +3759,7 @@ function finalise_parse($str, $mode=0)
 		$mail->start();
 		$mail->useQuotedPrintable();
 		
-		$mail->message = '<html><head><title>Wiki Revision</title></head><body>There is a new wiki page version ( ID ) = '.$lastID.'</body></html>';
-		
+		$mail->message = '<html><head><title>Wiki Revision</title></head><body>There is a new wiki page version ( ID ) = '.$lastID.'</br>'.$text.'</body></html>';
 		$mail->theParts['html']['content'] = $mail->message;
 		$mail->send($mail->recipient);	
 

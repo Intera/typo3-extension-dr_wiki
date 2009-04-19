@@ -466,7 +466,7 @@
 	         <type>input</type>
 	         <size>30</size>
 	         <max>100</max>
-	         <eval>trim,nospace</eval>
+	         <eval></eval>
 	       </config>
             </TCEforms>
       </mailRecipient>    
@@ -477,7 +477,7 @@
 	         <type>input</type>
 	         <size>30</size>
 	         <max>100</max>
-	         <eval>trim,nospace</eval>
+	         <eval></eval>
 	       </config>
             </TCEforms>
       </mailSubject> 
@@ -488,7 +488,7 @@
 	         <type>input</type>
 	         <size>30</size>
 	         <max>100</max>
-	         <eval>trim,nospace</eval>
+	         <eval></eval>
 	       </config>
             </TCEforms>
       </mailFromEmail> 
@@ -499,7 +499,7 @@
 	         <type>input</type>
 	         <size>30</size>
 	         <max>100</max>
-	         <eval>trim,nospace</eval>
+	         <eval></eval>
 	       </config>
             </TCEforms>
       </mailFromName>     
