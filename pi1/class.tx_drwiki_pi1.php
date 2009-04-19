@@ -66,7 +66,7 @@
         var $scriptRelPath = "pi1/class.tx_drwiki_pi1.php"; 
         var $extKey = "dr_wiki"; // The extension key.
         var $sitePath = "";
-		var $drWikiVersion = 'dr_wiki Version 1.8 (beta)';
+		var $drWikiVersion = 'dr_wiki Version 1.7.3';
         // PID for record storage - 0 is default
         var $storagePid = 0;
 

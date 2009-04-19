@@ -31,8 +31,10 @@ class tx_drwiki_pi1_indexListFormatter {
      	$pidList = $this->object->pi_getPidList($this->object->conf["pidList"], $this->object->conf["recursive"]);
      	$enabledFields = $this->object->cObj->enableFields("tx_drwiki_pages");
      	
+     	$newestEntries = $this->getNewestEntries();
+     	
      	$whereString = "tx_drwiki_pages.pid IN (".$pidList.") ". $enabledFields .
-     				   " AND tx_drwiki_pages.uid IN (Select MAX(uid) AS uid from tx_drwiki_pages WHERE tx_drwiki_pages.pid IN (".$pidList.")".$enabledFields." GROUP by keyword ORDER BY uid DESC)".
+     				   " AND tx_drwiki_pages.uid IN (".$newestEntries.")".
                        " AND tx_drwiki_pages.body LIKE '%[[".$GLOBALS['TYPO3_DB']->quoteStr($category,'tx_drwiki_pages')."%'";	
      	
      	$res = $GLOBALS['TYPO3_DB']->exec_SELECTquery(
@@ -78,7 +80,30 @@ class tx_drwiki_pi1_indexListFormatter {
 	
 	  	return $content;
 	}
-
+	
+	/*
+	 * getNewestEntries
+	 * @return: Comma seperated list of entries (uids) of the latest pages
+	 */
+	function getNewestEntries() {
+		    	
+     	//get Category entries
+	 	$pidList = $this->object->pi_getPidList($this->object->conf["pidList"], $this->object->conf["recursive"]);
+	 	$enabledFields = $this->object->cObj->enableFields("tx_drwiki_pages");
+	 	
+	 	// get newest entires of database
+	 	$res = $GLOBALS['TYPO3_DB']->exec_SELECTquery(
+			"MAX(uid) AS uid",
+			"tx_drwiki_pages",
+	        "tx_drwiki_pages.pid IN (".$pidList.")".$enabledFields." GROUP by keyword ORDER BY uid DESC"
+	    );
+	    
+	    while ($row = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res)) {
+	        $results[] = $row["uid"];
+	    }
+	    return implode(",",$results);
+	}
+	
 	function createLink($keyword, $namespace) {
 		if ($namespace) {
 			$linkTitle = $keyword . ' (' . $namespace .')';
