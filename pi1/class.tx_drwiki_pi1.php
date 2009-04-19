@@ -50,6 +50,8 @@
     require_once(t3lib_extMgm::extPath('dr_wiki').'lib/class.html_sanitizer.php');
     //Load Index List formattinf Class for Categories
     require_once(t3lib_extMgm::extPath('dr_wiki').'lib/class.wiki.createIndexList.php');
+    //Load Mailer Extension
+    require_once (PATH_t3lib.'class.t3lib_htmlmail.php');
 
     // Ratings API if enabled;
 	if (t3lib_extMgm::isLoaded('ratings')) {
@@ -205,7 +207,6 @@
             
             // get configuration from TYPO3 TCA/Flexform and initialise extension
             $this->conf = $conf;
-            
             $this->pi_setPiVarDefaults();
             $this->pi_initPIflexForm(); // Init and get the flexform data of the plugin
             
@@ -262,6 +263,13 @@
             $this->wikiHeader = $this->ffConf["wikiHeader"] ? $this->ffConf["wikiHeader"] : "";
             $this->wikiFooter = $this->ffConf["wikiFooter"] ? $this->ffConf["wikiFooter"] : "";
             
+            //add mail stuff
+            $this->mailNotify  = $this->ffConf["mailNotify"] ? true : false;
+            $this->mailRecipient  = $this->ffConf["mailRecipient"] ? $this->ffConf["mailRecipient"] : "";
+            $this->mailFromEmail  = $this->ffConf["mailFromEmail"] ? $this->ffConf["mailFromEmail"] : "";
+            $this->mailFromName  = $this->ffConf["mailFromName"] ? $this->ffConf["mailFromName"] : "";
+            $this->mailSubject  = $this->ffConf["mailSubject"] ? $this->ffConf["mailSubject"] : "";
+            
             // Editor Config
             $this->numberRows = $this->ffConf["numberRows"] ? $this->ffConf["numberRows"] : $conf['editorConfig.']['numberRows'];
             $this->numberColumns = $this->ffConf["numberColumns"] ? $this->ffConf["numberColumns"] : $conf['editorConfig.']['numberColumns'];
@@ -310,6 +318,13 @@
             // Load the ratings API if enabled
 	        if (t3lib_extMgm::isLoaded('ratings')) {
 				$this->ratingsApiObj = t3lib_div::makeInstance('tx_ratings_api');
+			}
+			
+			// include srfreecap
+        	if (t3lib_extMgm::isLoaded('sr_freecap') ) {
+				require_once(t3lib_extMgm::extPath('sr_freecap').'pi2/class.tx_srfreecap_pi2.php');
+				$this->freeCap = t3lib_div::makeInstance('tx_srfreecap_pi2');
+						
 			}
 			
             switch((string)$conf["CMD"])
@@ -999,8 +1014,13 @@
                         'date' => $this->piVars['date'],
                         'author' => $this->piVars['author'],
                         'locked' => $isLocked,
+                        'hidden' => $this->mailNotify,
                     )
                 );
+                
+                if ($this->mailNotify) {
+                	$this->mailAdmin($GLOBALS['TYPO3_DB']->sql_insert_id());
+                }
 
                 $this->piVars["cmd"] = "";
                 $this->piVars["section"] = "";
@@ -1019,6 +1039,9 @@
             } else {
                 // the user has freshly clicked a create-link, so we display
                 // the form
+                
+                //create captcha
+                //$captcha = $this->freeCap->makeCaptcha();
                 
                 // get user name
                 $author = $this->getUser();
@@ -1117,6 +1140,7 @@
 	                            'date' => $this->piVars['date'],
 	                            'author' => $this->piVars['author'],
 	                            'locked' => $isLocked,
+	                            'hidden' => $this->mailNotify,
 	                        );
 	                // HOOK: insert only if hook returns OK or is not set
 	                if($this->hook_submit_beforeInsert($pageContent)){
@@ -1124,6 +1148,10 @@
 	                        'tx_drwiki_pages',
 	                        $pageContent
 	                    );
+	                    
+		                if ($this->mailNotify) {
+		                	$this->mailAdmin($GLOBALS['TYPO3_DB']->sql_insert_id());
+		                }	                    
                 	}
                 	// HOOK: to do something after insert
                 	$this->hook_submit_afterInsert($pageContent);
@@ -3704,9 +3732,38 @@ function finalise_parse($str, $mode=0)
         } else { // if hook is not set
             return TRUE; // Return True is default 
         }
- 	}
- 	
-} 
+ 	} 
+
+	/**
+	 * mailAdmin
+	 *
+	 * Christian Bieber , christian.bieberl@dkd.de
+	 * 9.1.2009
+	 * 
+	 * send Admin a mail that a new entry has been inserted
+	 *
+	 * @param	[int]	id of new entry
+	 */
+	function mailAdmin($lastID) {
+		
+		$mail = t3lib_div::makeInstance('t3lib_htmlmail');
+		$mail->recipient = $mail->recipient = $this->mailRecipient;
+		$mail->subject = $mail->subject = $this->mailSubject; 
+		
+		$mail->from_email = $this->mailFromEmail;
+		$mail->from_name = $this->mailFromName;
+		$mail->charset = 'utf-8';
+		$mail->mailer = '';
+		$mail->start();
+		$mail->useQuotedPrintable();
+		
+		$mail->message = '<html><head><title>Wiki Revision</title></head><body>There is a new wiki page version ( ID ) = '.$lastID.'</body></html>';
+		
+		$mail->theParts['html']['content'] = $mail->message;
+		$mail->send($mail->recipient);	
+
+	}
+
 
 /**
  * inGroup
@@ -3733,7 +3790,7 @@ function inGroup ($groups, $user = -1)
    }
    return false;
   } 
-
+}
 // end of DR_WIKI
 
 if (defined("TYPO3_MODE") && $TYPO3_CONF_VARS[TYPO3_MODE]["XCLASS"]["ext/dr_wiki/pi1/class.tx_drwiki_pi1.php"])
