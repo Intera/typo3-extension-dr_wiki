@@ -38,11 +38,12 @@ $LOCAL_LANG = Array (
 		'pi_edit_preview' => 'Preview',
 		'pi_add_template' => ' <em>Insert Template:</em>',
 		'pi_edit_ver_warning' => '<b><em>Attention:</em> Another user has changed the same version of this article earlier! Please edit this page again using the most recent version - Your current changes have not been saved and the latest version is displayed!</b><br/><br/>',
-		'pi_edit_login_warning' => '<b><em>Attention:</em></b><br /> You need to be logged-in to edit this wiki. Please go to the logi-page, which you will find here: ',
+		'pi_edit_login_warning' => '<b><em>Attention:</em></b><br /> You need to be logged-in to edit this wiki. Please go to the login-page, which you will find here: ',
 		'pi_edit_disallowed' => '<b><em>Sorry:</em></b><br /> You are not allowed to edit or create this article. Please contact an administrator if you think this is an error.',
 		'pi_edit_tmpledit' => '[Edit]',
 		'pi_edit_usedtmpl' => 'Used Wiki Templates',
 		
+		'pi_mail_notify_warning' => '<b><em>Attention:</em></b><br /> Your changes were saved ad send to the editor of the wiki. After a review they will be added. ',
 
 		'tb_bold_sample' => 'Bold text',
 		'tb_bold_tip' => '[Alt+Shift+B] Bold text',

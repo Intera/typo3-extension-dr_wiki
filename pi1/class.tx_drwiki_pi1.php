@@ -210,7 +210,6 @@
             $this->pi_setPiVarDefaults();
             $this->pi_initPIflexForm(); // Init and get the flexform data of the plugin
             
-            
             $this->sanitizer =  new html_sanitizer;
             //initialte HTML sanitizer
             //TODO: Add to configuration
@@ -263,8 +262,9 @@
             $this->wikiHeader = $this->ffConf["wikiHeader"] ? $this->ffConf["wikiHeader"] : "";
             $this->wikiFooter = $this->ffConf["wikiFooter"] ? $this->ffConf["wikiFooter"] : "";
             
-            //add mail stuff
+            //add mail stuff mailHideItem
             $this->mailNotify  = $this->ffConf["mailNotify"] ? true : false;
+            $this->mailHideItem  = $this->ffConf["mailHideItem"] ? false : true;
             $this->mailRecipient  = $this->ffConf["mailRecipient"] ? $this->ffConf["mailRecipient"] : "";
             $this->mailFromEmail  = $this->ffConf["mailFromEmail"] ? $this->ffConf["mailFromEmail"] : "";
             $this->mailFromName  = $this->ffConf["mailFromName"] ? $this->ffConf["mailFromName"] : "";
@@ -440,7 +440,7 @@
 	                        'tstamp' => time(),
 	                        'summary' => $this->piVars['summary'],
 	                        'keyword' => trim($this->piVars['keyword']),
-	                        'body' => '='.$this->nameSpaces["Category"]. ': '.$this->getKeywordFromNameSpace(trim($this->piVars['keyword'])).'=',
+	                        'body' => '={{PAGENAME}}=', //ToDo: Make it FlexForm
 	                        'date' => $this->piVars['date'],
 	                        'author' => 'Category Creator',
 	                    );
@@ -476,6 +476,14 @@
             	//un-/lock current page and return page-view and reset cmd varaible in piVars
             	$this->piVars["cmd"] = '';
             	$this->togglePageLock($this->piVars["keyword"]);
+            	return $this->singleView($content, $conf);
+            	
+            } elseif($this->piVars["cmd"] == 'activateHidden' && $this->isUserWikiAdmin()){
+            	//activate hidden versions from mail notification
+            	$this->piVars["cmd"] = '';
+            	$myUid = $this->piVars["showUid"];
+            	$this->piVars["showUid"]='';
+            	$this->activateHiddenItem($myUid);
             	return $this->singleView($content, $conf);
             	
             } else {
@@ -1002,9 +1010,13 @@
                 $isLocked = 0;
                 if ($this->isUserWikiAdmin()) $isLocked = $this->isRecordLocked($this->piVars['keyword']);
                 
-                $res = $GLOBALS['TYPO3_DB']->exec_INSERTquery(
-                    'tx_drwiki_pages',
-                    array(
+                // check hiding status --> only set it when email notification is
+                // active - otherwise set to false
+                if ($this->mailNotify) 
+                	{$hidden = $this->mailHideItem;}
+                else {$hidden = false;}
+                
+                $pageContent = array(
                         'pid' => $this->storagePid,
                         'crdate' => time(),
                         'tstamp' => time(),
@@ -1014,8 +1026,12 @@
                         'date' => $this->piVars['date'],
                         'author' => $this->piVars['author'],
                         'locked' => $isLocked,
-                        'hidden' => $this->mailNotify,
-                    )
+                        'hidden' => $hidden,
+                    );
+                
+                $res = $GLOBALS['TYPO3_DB']->exec_INSERTquery(
+                    'tx_drwiki_pages',
+                     $pageContent
                 );
                 
                 $this->piVars["cmd"] = "";
@@ -1030,12 +1046,18 @@
                 $this->piVars["referer"] = "";
                 $this->piVars["pluginSEARCH"]["sword"] = "";
                 $this->piVars["pluginSEARCH"]["submit"] = "";   
-                            
+                 
+                // send mail and add note to the output that everything was saved 
+                $note ="";            
                 if ($this->mailNotify) {
-                	$this->mailAdmin($GLOBALS['TYPO3_DB']->sql_insert_id(), $pageContent['body']);
+                	$this->mailAdmin($GLOBALS['TYPO3_DB']->sql_insert_id(), $pageContent['keyword'], $pageContent['body']);
+		            $note = '<div class="wiki-box-yellow">'.
+		             	$this->cObj->cObjGetSingle($this->conf["sys_Info"], $this->conf["sys_Info."]).
+		             	$this->pi_getLL("pi_mail_notify_warning", "Your changes were mailed to the wiki editor and will be added later on.").
+						'<br/><br/></div>';                	
                 }
 
-                return $this->singleView($content, $conf);
+                return $note . $this->singleView($content, $conf);
             } else {
                 // the user has freshly clicked a create-link, so we display
                 // the form
@@ -1130,6 +1152,13 @@
                     //check if previous record is locked (only when admin user is present)
                     $isLocked = 0;
                     if ($this->isUserWikiAdmin()) $isLocked = $this->isRecordLocked($this->piVars['keyword']);
+                    
+	                // check hiding status --> only set it when email notification is
+	                // active - otherwise set to false
+	                if ($this->mailNotify) 
+	                	{$hidden = $this->mailHideItem;}
+	                else {$hidden = false;}                    
+	                    
                     $pageContent = array(
 	                            'pid' => $this->storagePid,
 	                            'crdate' => time(),
@@ -1140,7 +1169,7 @@
 	                            'date' => $this->piVars['date'],
 	                            'author' => $this->piVars['author'],
 	                            'locked' => $isLocked,
-	                            'hidden' => $this->mailNotify,
+	                            'hidden' => $hidden,
 	                        );
 	                        
 	                //TODO: Check if unset aray could be done more efficint
@@ -1165,14 +1194,19 @@
 	                        $pageContent
 	                    );
 	                    
+	                    $note = '';
 		                if ($this->mailNotify) {
-		                	$this->mailAdmin($GLOBALS['TYPO3_DB']->sql_insert_id(), $pageContent['body']);
+		                	$this->mailAdmin($GLOBALS['TYPO3_DB']->sql_insert_id(), $pageContent['keyword'], $pageContent['body']);
+				            $note = '<div class="wiki-box-yellow">'.
+				             	$this->cObj->cObjGetSingle($this->conf["sys_Info"], $this->conf["sys_Info."]).
+				             	$this->pi_getLL("pi_mail_notify_warning", "Your changes were mailed to the editor and will be added later on.").
+								'<br/><br/></div>';             		                	
 		                }	                    
                 	}
                 	// HOOK: to do something after insert
                 	$this->hook_submit_afterInsert($pageContent);
 
-                	return $this->singleView($content, $conf);
+                	return $note . $this->singleView($content, $conf);
                 } else {  // changes are detected....
                 	$this->piVars["cmd"] = "";
                 	$this->piVars["section"] = "";
@@ -2063,6 +2097,17 @@
 			$db = $GLOBALS["TYPO3_DB"];
 			$db->exec_UPDATEquery("tx_drwiki_pages",$where,$what);
         }     
+        
+/**
+ * activateHiddenItem
+ * 
+ */        
+        function activateHiddenItem($uid) {
+        	$where = "uid=". $uid;
+			$what = array("hidden" => false);
+			$db = $GLOBALS["TYPO3_DB"];
+			$db->exec_UPDATEquery("tx_drwiki_pages",$where,$what);
+        }             
         
         function getNameSpace ($keyword) {
         	$getNS = preg_match_all( '/(.*)(:)(.*)/', $keyword, $matchesNS );
@@ -3744,8 +3789,10 @@ function finalise_parse($str, $mode=0)
 	 * send Admin a mail that a new entry has been inserted
 	 *
 	 * @param	[int]	id of new entry
+	 * @param	[string]	name of the page 
+	 * @param	[string]	body of the message (wiki markup)
 	 */
-	function mailAdmin($lastID, $text = "") {
+	function mailAdmin($lastID, $pageName, $text = "") {
 		
 		$text = $this->parse($text, 1);
 		$mail = t3lib_div::makeInstance('t3lib_htmlmail');
@@ -3759,7 +3806,12 @@ function finalise_parse($str, $mode=0)
 		$mail->start();
 		$mail->useQuotedPrintable();
 		
-		$mail->message = '<html><head><title>Wiki Revision</title></head><body>There is a new wiki page version ( ID ) = '.$lastID.'</br>'.$text.'</body></html>';
+		$user = '<a href="mailto:'.$GLOBALS["TSFE"]->fe_user->user["email"].'">'.$GLOBALS["TSFE"]->fe_user->user["username"].'</a>';
+		$activationLink = $this->pi_linkTP_keepPIvars("Activate page: ".$pageName, array("keyword" => $pageName, "cmd" => "activateHidden", "showUid" => $lastID), 1, 0);
+		
+		$mail->message = '<html><head><title>Wiki Revision</title></head><body>There is a new wiki page version ( ID ) = '.$lastID.' (From: '.$user.') <br />'
+						 .$activationLink.'? Note: You need to be logged-in as admin user!<br />'
+						 .'Contained text: <br /><br /><hr />'.$text.'</body></html>';
 		$mail->theParts['html']['content'] = $mail->message;
 		$mail->send($mail->recipient);	
 

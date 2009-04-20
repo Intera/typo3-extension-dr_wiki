@@ -45,11 +45,13 @@
             <label index="tt_content.pi_flexform.wikiHeader">Adv: Text for static header - please use the dr_wiki markups:</label>
             <label index="tt_content.pi_flexform.wrapLinesOn">Editor: Turn on line wrapping? (Default: Off).</label>
             <label index="tt_content.pi_flexform.sheet_notificationEmail">Email Notification</label>
-            <label index="tt_content.pi_flexform.mailNotify">Activate Email Notification</label>
+            <label index="tt_content.pi_flexform.mailNotify">Activate Email Notification (default: deactivated)</label>
+            <label index="tt_content.pi_flexform.mailHideItem">Do not hide new records on creation</label>
             <label index="tt_content.pi_flexform.mailRecipient">Recipient's email address</label>
             <label index="tt_content.pi_flexform.mailSubject">Notification subject</label>
             <label index="tt_content.pi_flexform.mailFromEmail">From email address</label>
             <label index="tt_content.pi_flexform.mailFromName">From email name</label>
+            
         </languageKey>
         <languageKey index="de" type="array">
             <label index=""></label>
