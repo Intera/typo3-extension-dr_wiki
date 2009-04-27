@@ -68,7 +68,7 @@
         var $scriptRelPath = "pi1/class.tx_drwiki_pi1.php"; 
         var $extKey = "dr_wiki"; // The extension key.
         var $sitePath = "";
-		var $drWikiVersion = 'dr_wiki Version 1.7.3';
+		var $drWikiVersion = 'dr_wiki Version 1.8.2';
         // PID for record storage - 0 is default
         var $storagePid = 0;
 
@@ -985,9 +985,9 @@
 							$link.'<br/><br/></div>';
 				    return $content;
                  }   
-                if (  ($this->allowedGroups == true) && (!inGroup ($this->allowedGroups))    // User is NOT in "Allowed Groups"?
+                if (  ($this->allowedGroups == true) && (!$this->inGroup ($this->allowedGroups))    // User is NOT in "Allowed Groups"?
                      OR 
-                      ($this->disallowedGroups == true) && (inGroup ($this->disallowedGroups))  ) // User IS in "Disallowed Groups"?
+                      ($this->disallowedGroups == true) && ($this->inGroup ($this->disallowedGroups))  ) // User IS in "Disallowed Groups"?
                 {
                     $parameters = array("redirect_url" => $this->pi_linkTP_keepPIvars_url(array("cmd" => "edit", "submit" => ""), 1, 0));	
                     $content = '<div class="wiki-box-red">'.
@@ -1300,9 +1300,9 @@
     							$link.'<br/><br/></div>';
     				    return $content;
                      }   
-                    if (  ($this->allowedGroups == true) && (!inGroup ($this->allowedGroups))    // User is NOT in "Allowed Groups"?
+                    if (  ($this->allowedGroups == true) && (!$this->inGroup ($this->allowedGroups))    // User is NOT in "Allowed Groups"?
                          OR 
-                          ($this->disallowedGroups == true) && (inGroup ($this->disallowedGroups))  ) // User IS in "Disallowed Groups"?
+                          ($this->disallowedGroups == true) && ($this->inGroup ($this->disallowedGroups))  ) // User IS in "Disallowed Groups"?
                     {
                         $parameters = array("redirect_url" => $this->pi_linkTP_keepPIvars_url(array("cmd" => "edit", "submit" => ""), 1, 0));	
                         $content = '<div class="wiki-box-red">'.
