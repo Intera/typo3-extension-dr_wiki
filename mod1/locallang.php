@@ -49,6 +49,16 @@ $LOCAL_LANG = Array (
                 'cmd_delOlderUidDone' => 'You deleted all older versions!',
                 'cmd_delAllOther' => 'Do you really want to delete all older versions (except this one) of the following wiki-word?',
                 'cmd_delAllOtherDone' => 'You deleted all other versions of the following wiki-word!',
+			'rename_to' => 'Rename to',
+			'rename_redir' => 'Should a redirected from the old keyword be created?',
+			'rename_accept' => 'Submit changes',
+			'rename_alterbodys' => 'The following articles contain links to this page. Should they be changed?',
+			'rename_keywordempty' => 'Please enter the new keyword!',
+			'rename_keywordexists' => 'The new keyword does already exist! Please choose a different one (or delete the other first).',
+			'update' => 'Update',
+'rename_title' => 'Rename: ',
+'rename_ok' => 'Done.'
+
 	),
 	'dk' => Array (
 	),
