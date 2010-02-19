@@ -271,8 +271,6 @@ class tx_drwiki_module1 extends t3lib_SCbase {
 								$contentVersion = '<div align="center" style="background-color: red;border-width: 1px; border-color: black; border-style:solid;"><bR>'.$LANG->getLL("err_delAllOther").' <br /><em>[ID:' . $uid . ' - ' . $keyword . ']</em><br><br></div>';
 							}
 							break;
-							/* TODO Modifiy SQL to save version */
-							/* TODO Beautify code */
 							case "rename":
 							$keyword = $_GET["tx_drwiki_mod1"]["keyword"];
 
@@ -284,9 +282,18 @@ class tx_drwiki_module1 extends t3lib_SCbase {
 									$error = $LANG->getLL ("rename_keywordempty");
 								} else
 								{
-								$query = "SELECT COUNT(*) FROM tx_drwiki_pages where (keyword = '".mysql_real_escape_string($rename_to)."')";
-								// debugster ($query);
-								$res = $GLOBALS['TYPO3_DB']->sql_query($query);
+								$query = $GLOBALS['TYPO3_DB']->SELECTquery(
+									'*',         // SELECT ...
+									'tx_drwiki_pages',     // FROM ...
+									'(keyword = '.mysql_real_escape_string($rename_to),    // WHERE...
+									'',            // GROUP BY...
+									'',    // ORDER BY...
+									''            // LIMIT ...
+								);
+								$res = $GLOBALS['TYPO3_DB']->sql(TYPO3_db, $query);
+
+
+
 								if (!$GLOBALS['TYPO3_DB']->sql_error()){
 									//debug(array($GLOBALS['TYPO3_DB']->sql_error(),$query));
 									$count = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res);
@@ -316,7 +323,14 @@ class tx_drwiki_module1 extends t3lib_SCbase {
 									foreach ($alter_bodies as $alter_keyword)
 									{
 										// Fetch newest body
-										$query2 = "select * FROM tx_drwiki_pages where keyword = '$alter_keyword' ORDER BY `crdate` DESC LIMIT 0,1";
+										$query2 = $GLOBALS['TYPO3_DB']->SELECTquery(
+											'*',         // SELECT ...
+											'tx_drwiki_pages',     // FROM ...
+											'keyword = "'.$alter_keyword.'"',    // WHERE...
+											'',            // GROUP BY...
+											'`crdate` DESC',    // ORDER BY...
+											'0,1'            // LIMIT ...
+										);
 										$res2 = $GLOBALS['TYPO3_DB']->sql_query($query2);
 										if (!$GLOBALS['TYPO3_DB']->sql_error()){
 											//		debug(array($GLOBALS['TYPO3_DB']->sql_error(),$query));
@@ -356,50 +370,54 @@ class tx_drwiki_module1 extends t3lib_SCbase {
 								$res = $GLOBALS['TYPO3_DB']->sql_query ($query4);
 								if (!$GLOBALS['TYPO3_DB']->sql_error()){
 									//		debug(array($GLOBALS['TYPO3_DB']->sql_error(),$query));
-									}
+								}
 								// Insert new revision to indicate change...
-									$query2 = "select * FROM tx_drwiki_pages where keyword = '$rename_to' ORDER BY `crdate` DESC LIMIT 0,1";
-									$res2 = $GLOBALS['TYPO3_DB']->sql_query($query2);
-									if (!$GLOBALS['TYPO3_DB']->sql_error()){
-										//		debug(array($GLOBALS['TYPO3_DB']->sql_error(),$query));
-									}
-									$revision = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res2);
-
+#									$query2 = "select * FROM tx_drwiki_pages where keyword = '$rename_to' ORDER BY `crdate` DESC LIMIT 0,1";
+								$query2 = $GLOBALS['TYPO3_DB']->SELECTquery(
+									'*',         // SELECT ...
+									'tx_drwiki_pages',     // FROM ...
+									'keyword = "'.$rename_to.'"',    // WHERE...
+									'',            // GROUP BY...
+									'`crdate` DESC',    // ORDER BY...
+									'0,1'            // LIMIT ...
+								);
+								$res2 = $GLOBALS['TYPO3_DB']->sql_query($query2);
+								if (!$GLOBALS['TYPO3_DB']->sql_error()){
+									//		debug(array($GLOBALS['TYPO3_DB']->sql_error(),$query));
+								}
+								$revision = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res2);
+								$insertArray = 	array (
+									'pid' => $revision['pid'],
+									'tstamp' => $now,
+									'crdate' => $now,
+									'keyword' => $revision['keyword'],
+									'body' => $revision['body'],
+									'date' => strftime ('%Y-%m-%d %H:%M:%S',$now),
+									'author' => '[<em>DR-Wiki Robot<em>]',
+									'summary' => "Changed keyword from $keyword to $rename_to");
+								$query4 = $GLOBALS['TYPO3_DB']->INSERTquery('tx_drwiki_pages', $insertArray);
+								$res4 = $GLOBALS['TYPO3_DB']->sql_query ($query4);
+								if (!$GLOBALS['TYPO3_DB']->sql_error()){
+									//		debug(array($GLOBALS['TYPO3_DB']->sql_error(),$query));
+								}
+								//					debugster ($query4);
+								// Create redirection
+								if (t3lib_div::GPVar('create_redir') == 'on') {
 									$insertArray = 	array (
-										'pid' => $revision['pid'],
-										'tstamp' => $now,
-										'crdate' => $now,
-										'keyword' => $revision['keyword'],
-										'body' => $revision['body'],
-										'date' => strftime ('%Y-%m-%d %H:%M:%S',$now),
-										'author' => '[<em>DR-Wiki Robot<em>]',
-										'summary' => "Changed keyword from $keyword to $rename_to");
-
+									'pid' => $revision['pid'],
+									'tstamp' => $now,
+									'crdate' => $now,
+									'keyword' => $keyword,
+									'body' => "#REDIRECT [[$rename_to]]",
+									'date' => strftime ('%Y-%m-%d %H:%M:%S',$now),
+									'author' => '[<em>DR-Wiki Robot<em>]',
+									'summary' => "Created redirection after moving all content from $keyword to $rename_to");
 									$query4 = $GLOBALS['TYPO3_DB']->INSERTquery('tx_drwiki_pages', $insertArray);
 									$res4 = $GLOBALS['TYPO3_DB']->sql_query ($query4);
 									if (!$GLOBALS['TYPO3_DB']->sql_error()){
 										//		debug(array($GLOBALS['TYPO3_DB']->sql_error(),$query));
 									}
-
-									//					debugster ($query4);
-
-									// Create redirection
-									if (t3lib_div::GPVar('create_redir') == 'on') {
-										$insertArray = 	array (
-										'pid' => $revision['pid'],
-										'tstamp' => $now,
-										'crdate' => $now,
-										'keyword' => $keyword,
-										'body' => "#REDIRECT [[$rename_to]]",
-										'date' => strftime ('%Y-%m-%d %H:%M:%S',$now),
-										'author' => '[<em>DR-Wiki Robot<em>]',
-										'summary' => "Created redirection after moving all content from $keyword to $rename_to");
-										$query4 = $GLOBALS['TYPO3_DB']->INSERTquery('tx_drwiki_pages', $insertArray);
-										$res4 = $GLOBALS['TYPO3_DB']->sql_query ($query4);
-										if (!$GLOBALS['TYPO3_DB']->sql_error()){
-											//		debug(array($GLOBALS['TYPO3_DB']->sql_error(),$query));
-										}
-									}
+								}
 								$contentRename .= "<div style='background-color: #32CD32 ;border-width: 1px; color:white; border-color: black; border-style:solid;margin:5px;padding:5px'>".$LANG->getLL('rename_ok')."</div>";
 								// All done exit Rename Case early
 								break;
@@ -427,7 +445,15 @@ class tx_drwiki_module1 extends t3lib_SCbase {
 							while($occurences = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res)){
 								$occurence = $occurences ['keyword'];
 								// Does the newest version have the keyword, which should be renamed?
-								$query2 = "select * FROM tx_drwiki_pages where keyword = '$occurence' ORDER BY `crdate` DESC LIMIT 0,1";
+#								$query2 = "select * FROM tx_drwiki_pages where keyword = '$occurence' ORDER BY `crdate` DESC LIMIT 0,1";
+								$query2 = $GLOBALS['TYPO3_DB']->SELECTquery(
+								'*',         // SELECT ...
+								'tx_drwiki_pages',     // FROM ...
+								'keyword = "'.$occurence.'"',    // WHERE...
+								'',            // GROUP BY...
+								'`crdate` DESC',    // ORDER BY...
+								'0,1'            // LIMIT ...
+								);
 								$res2 = $GLOBALS['TYPO3_DB']->sql_query($query2);
 								if (!$GLOBALS['TYPO3_DB']->sql_error()){
 									//debug(array($GLOBALS['TYPO3_DB']->sql_error(),$query));
@@ -464,9 +490,7 @@ class tx_drwiki_module1 extends t3lib_SCbase {
 											$match =  str_ireplace  ("[[$keyword|","<b>[[$keyword|</b>",$match);
 											$contentRename   .= "<div style='margin-left:10px'>... ".$match."... </div>";
 										}
-
 									}
-
 								}
 							}
 							$contentRename .= '<input style="margin:10px 0px 6px 0px" type="submit" name="rename_submit" value="'.$LANG->getLL("update").'""> ';
