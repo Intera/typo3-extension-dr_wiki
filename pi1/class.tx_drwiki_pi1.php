@@ -51,7 +51,7 @@
     //Load Index List formattinf Class for Categories
     require_once(t3lib_extMgm::extPath('dr_wiki').'lib/class.wiki.createIndexList.php');
     //Load Mailer Extension
-    require_once (PATH_t3lib.'class.t3lib_htmlmail.php');
+    //require_once (PATH_t3lib.'class.t3lib_htmlmail.php');
 
     // Ratings API if enabled;
 	if (t3lib_extMgm::isLoaded('ratings')) {
